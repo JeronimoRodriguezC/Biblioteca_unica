@@ -5,15 +5,20 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: bilioteca_db
+      MYSQL_DATABASE: biblioteca_db
       MYSQL_USER: admin
       MYSQL_PASSWORD: admin
     ports:
       - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
     networks:
       - app_red
-    volumes:
-    - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   phpmyadmin:
     image: phpmyadmin:latest
@@ -21,16 +26,34 @@ services:
     restart: always
     environment:
       PMA_HOST: db
+      PMA_PORT: 3306
       MYSQL_ROOT_PASSWORD: rootpassword
     ports:
-      - "8081:80"
-    networks:
-      - app_red
+      - "8080:80"
     depends_on:
       - db
+    networks:
+      - app_red
+
+  
+  importpy:
+    build:
+      context: .
+      dockerfile: Dockerfile.pyimport
+
+    container_name: script_py_import
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - app_red
+
 
 networks:
   app_red:
     driver: bridge
+
 volumes:
   db_data:
